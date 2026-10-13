@@ -71,3 +71,4 @@ By default, the server runs on `http://0.0.0.0:5173`.
    - On Android: Tap `⋮` (menu) $\rightarrow$ **"Add to Home Screen"** or **"Install app"**.
    - On iOS: Tap Share $\rightarrow$ **"Add to Home Screen"**.
    - The app will now launch full-screen like a native mobile app without paying any third-party fees!
+

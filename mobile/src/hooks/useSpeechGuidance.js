@@ -70,3 +70,4 @@ export function useSpeechGuidance(settings = {}) {
     lastAnnouncement,
   };
 }
+

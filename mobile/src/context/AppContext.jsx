@@ -7,8 +7,8 @@ export function AppProvider({ children }) {
   // Role: "user" (Visually Impaired / Caregiver) | "company" (Developer / Admin)
   const [role, setRole] = useState("user");
 
-  // Navigation tab
-  const [activeTab, setActiveTab] = useState("navigation");
+  // Navigation tab matching Emergent
+  const [activeTab, setActiveTab] = useState("dashboard");
 
   // Detection source: "mobile_camera" (Phone camera) | "physical_cane" (Radxa Cane)
   const [detectionSource, setDetectionSource] = useState("mobile_camera");
@@ -204,3 +204,4 @@ export function useApp() {
   if (!context) throw new Error("useApp must be used within an AppProvider");
   return context;
 }
+

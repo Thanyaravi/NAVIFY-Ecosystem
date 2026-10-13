@@ -203,3 +203,4 @@ export function SmartCaneStatusCard({ onOpenFindCane }) {
     </div>
   );
 }
+

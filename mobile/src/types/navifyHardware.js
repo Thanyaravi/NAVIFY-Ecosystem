@@ -87,3 +87,4 @@ export const INITIAL_TELEMETRY = {
   offlineLogsPending: 3,
   firebaseConnected: true,
 };
+

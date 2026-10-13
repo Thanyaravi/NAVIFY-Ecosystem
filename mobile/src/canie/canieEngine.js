@@ -185,3 +185,4 @@ export class CanieEngine {
 
 // Global CANIE singleton instance
 export const canie = new CanieEngine();
+
