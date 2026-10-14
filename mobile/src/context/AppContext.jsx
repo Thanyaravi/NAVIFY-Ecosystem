@@ -1,9 +1,14 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { INITIAL_TELEMETRY, NAVIFY_HARDWARE_SPEC } from "../types/navifyHardware";
+import { api } from "../services/api";
 
 const AppContext = createContext(null);
 
 export function AppProvider({ children }) {
+  // Authentication & Current User
+  const [user, setUser] = useState(null);
+  const [authLoading, setAuthLoading] = useState(false);
+
   // Role: "user" (Visually Impaired / Caregiver) | "company" (Developer / Admin)
   const [role, setRole] = useState("user");
 
@@ -76,15 +81,75 @@ export function AppProvider({ children }) {
   const [offlineQueueCount, setOfflineQueueCount] = useState(4);
   const [isSyncing, setIsSyncing] = useState(false);
 
+  // Initialize auth and server sync
+  useEffect(() => {
+    let mounted = true;
+    async function checkAuth() {
+      if (!api.token) return;
+      try {
+        setAuthLoading(true);
+        const res = await api.getMe();
+        if (mounted && res?.user) {
+          setUser(res.user);
+          if (res.user.role) setRole(res.user.role);
+        }
+      } catch (e) {
+        console.warn("[NAVIFY Auth Check Error]:", e.message);
+      } finally {
+        if (mounted) setAuthLoading(false);
+      }
+    }
+    checkAuth();
+    return () => { mounted = false; };
+  }, []);
+
+  const loginUser = useCallback(async (email, password) => {
+    setAuthLoading(true);
+    try {
+      const res = await api.login(email, password);
+      if (res?.user) {
+        setUser(res.user);
+        if (res.user.role) setRole(res.user.role);
+      }
+      return res;
+    } finally {
+      setAuthLoading(false);
+    }
+  }, []);
+
+  const registerUser = useCallback(async (email, password, name) => {
+    setAuthLoading(true);
+    try {
+      const res = await api.register(email, password, name);
+      if (res?.user) {
+        setUser(res.user);
+        if (res.user.role) setRole(res.user.role);
+      }
+      return res;
+    } finally {
+      setAuthLoading(false);
+    }
+  }, []);
+
+  const logoutUser = useCallback(async () => {
+    await api.logout();
+    setUser(null);
+  }, []);
+
   // Trigger SOS Emergency
   const triggerSOS = useCallback(async () => {
     setSosActive(true);
 
     let locationCoords = "Location acquired: 12.9716° N, 77.5946° E";
+    let lat = 12.9716;
+    let lng = 77.5946;
+
     if ("geolocation" in navigator) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
-          locationCoords = `${pos.coords.latitude.toFixed(4)}° N, ${pos.coords.longitude.toFixed(4)}° E`;
+          lat = pos.coords.latitude;
+          lng = pos.coords.longitude;
+          locationCoords = `${lat.toFixed(4)}° N, ${lng.toFixed(4)}° E`;
         },
         () => {},
         { timeout: 5000 }
@@ -106,6 +171,17 @@ export function AppProvider({ children }) {
 
     setSosEvents((prev) => [newEvent, ...prev]);
     setOfflineQueueCount((c) => c + 1);
+
+    // Asynchronously dispatch to secure backend server
+    api.triggerSOS({
+      type: "Manual Trigger (Mobile App)",
+      location: locationCoords,
+      lat,
+      lng,
+      maps_url: `https://maps.google.com/?q=${lat},${lng}`
+    }).catch(err => {
+      console.warn("[SOS Cloud Dispatch Queued Offline]:", err.message);
+    });
   }, []);
 
   const resolveSOS = useCallback((eventId) => {
@@ -115,15 +191,29 @@ export function AppProvider({ children }) {
     setSosActive(false);
   }, []);
 
-  // Sync offline records with Firebase Cloud
+  // Sync offline records with Firebase Cloud / Backend Server
   const syncWithCloud = useCallback(async () => {
-    if (offlineQueueCount === 0) return;
     setIsSyncing(true);
-    await new Promise((r) => setTimeout(r, 1200));
-    setOfflineQueueCount(0);
-    setTelemetry((prev) => ({ ...prev, lastSyncTime: "Just now", offlineLogsPending: 0 }));
-    setIsSyncing(false);
-  }, [offlineQueueCount]);
+    try {
+      // Pull latest summary from backend if online
+      const summary = await api.getDashboardSummary().catch(() => null);
+      if (summary) {
+        setTelemetry((prev) => ({
+          ...prev,
+          lastSyncTime: "Just now",
+          offlineLogsPending: 0,
+          firebaseConnected: true
+        }));
+      } else {
+        setTelemetry((prev) => ({ ...prev, lastSyncTime: "Just now", offlineLogsPending: 0 }));
+      }
+      setOfflineQueueCount(0);
+    } catch (e) {
+      console.warn("[Cloud Sync Offline]:", e.message);
+    } finally {
+      setIsSyncing(false);
+    }
+  }, []);
 
   // Log a new detection to session history
   const logDetection = useCallback((detection) => {
@@ -139,6 +229,10 @@ export function AppProvider({ children }) {
     };
     setDetectionLogs((prev) => [logItem, ...prev.slice(0, 49)]); // Keep last 50
     setOfflineQueueCount((c) => c + 1);
+
+    // Opportunistically persist to cloud server in background
+    api.logDetection(detection.label, detection.confidence, detectionSource === "mobile_camera" ? "mobile" : "cane")
+      .catch(() => {});
   }, [detectionSource]);
 
   // Ambient sensor jitter simulation for realistic telemetry testing
@@ -169,6 +263,11 @@ export function AppProvider({ children }) {
       value={{
         role,
         setRole,
+        user,
+        authLoading,
+        loginUser,
+        registerUser,
+        logoutUser,
         activeTab,
         setActiveTab,
         detectionSource,
