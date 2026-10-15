@@ -8,3 +8,4 @@ echo Checking Flutter devices...
 cd /d "%~dp0navify_flutter"
 call flutter run
 pause
+

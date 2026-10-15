@@ -14,3 +14,4 @@ echo Location: navify_flutter\build\app\outputs\flutter-apk\app-release.apk
 echo Copy this file to your Android phone and tap to install!
 echo ========================================================
 pause
+
