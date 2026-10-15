@@ -3,9 +3,71 @@ import 'package:provider/provider.dart';
 import 'package:navify_app/ui/core/app_theme.dart';
 import 'package:navify_app/ui/core/glass_container.dart';
 import 'package:navify_app/ui/view_models/app_view_model.dart';
+import 'package:navify_app/data/models/sos_event_model.dart';
 
 class SOSCenterView extends StatelessWidget {
   const SOSCenterView({super.key});
+
+  void _showEditContactDialog(BuildContext context, AppViewModel vm, EmergencyContact? contact) {
+    final nameCtrl = TextEditingController(text: contact?.name ?? '');
+    final relationCtrl = TextEditingController(text: contact?.relation ?? '');
+    final phoneCtrl = TextEditingController(text: contact?.phone ?? '');
+    bool isPrimary = contact?.isPrimary ?? false;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setState) => AlertDialog(
+          backgroundColor: Theme.of(ctx).cardTheme.color,
+          title: Text(contact == null ? "Add Emergency Contact" : "Edit Contact & Phone Number", style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameCtrl,
+                decoration: const InputDecoration(labelText: "Full Name (e.g. Vikram Sir)"),
+              ),
+              TextField(
+                controller: relationCtrl,
+                decoration: const InputDecoration(labelText: "Relation (e.g. Mentor / Doctor)"),
+              ),
+              TextField(
+                controller: phoneCtrl,
+                keyboardType: TextInputType.phone,
+                decoration: const InputDecoration(labelText: "Real Phone Number (e.g. +91 98450...)"),
+              ),
+              const SizedBox(height: 12),
+              CheckboxListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text("Set as Primary SOS Auto-Dial", style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                value: isPrimary,
+                onChanged: (val) => setState(() => isPrimary = val ?? false),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text("Cancel"),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (phoneCtrl.text.trim().isNotEmpty) {
+                  if (contact != null) {
+                    vm.updateContact(contact.id, nameCtrl.text.trim(), relationCtrl.text.trim(), phoneCtrl.text.trim(), isPrimary);
+                  } else {
+                    vm.addContact(nameCtrl.text.trim(), relationCtrl.text.trim(), phoneCtrl.text.trim(), isPrimary);
+                  }
+                  Navigator.pop(ctx);
+                }
+              },
+              child: const Text("Save Number"),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -32,7 +94,7 @@ class SOSCenterView extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      vm.sosActive ? "EMERGENCY BROADCAST ACTIVE" : "SOS SYSTEM STANDBY",
+                      vm.sosActive ? "EMERGENCY BROADCAST ACTIVE" : "SOS SYSTEM ARMED",
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.bold,
@@ -57,7 +119,7 @@ class SOSCenterView extends StatelessWidget {
           ),
         ),
 
-        const SizedBox(height: 24),
+        const SizedBox(height: 20),
 
         // Glowing Circular SOS Button
         Center(
@@ -77,12 +139,12 @@ class SOSCenterView extends StatelessWidget {
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFFEF4444).withOpacity(vm.sosActive ? 0.7 : 0.4),
+                    color: const Color(0xFFEF4444).withValues(alpha: vm.sosActive ? 0.7 : 0.4),
                     blurRadius: vm.sosActive ? 36 : 20,
                     spreadRadius: vm.sosActive ? 8 : 2,
                   ),
                 ],
-                border: Border.all(color: Colors.white.withOpacity(0.4), width: 3),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.4), width: 3),
               ),
               child: const Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -113,23 +175,44 @@ class SOSCenterView extends StatelessWidget {
           ),
         ),
 
-        const SizedBox(height: 28),
+        const SizedBox(height: 20),
+
+        // Auto-Call on SOS Toggle
+        GlassContainer(
+          borderRadius: 14,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          child: Row(
+            children: [
+              const Icon(Icons.phone_forwarded_rounded, color: AppColors.primaryCyan, size: 20),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text("Auto-Dial Primary Contact", style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                    Text("Automatically initiates real phone call when SOS is tapped", style: TextStyle(fontSize: 11, color: Colors.grey)),
+                  ],
+                ),
+              ),
+              Switch(
+                value: vm.autoCallOnSos,
+                activeColor: AppColors.emeraldMint,
+                onChanged: (_) => vm.toggleAutoCallOnSos(),
+              ),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: 14),
 
         // GPS Location Card
         GlassContainer(
           borderRadius: 16,
-          child: Row(
+          child: const Row(
             children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: AppColors.primaryCyan.withOpacity(0.15),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.location_on_rounded, color: AppColors.primaryCyan, size: 22),
-              ),
-              const SizedBox(width: 12),
-              const Expanded(
+              Icon(Icons.location_on_rounded, color: AppColors.primaryCyan, size: 22),
+              SizedBox(width: 12),
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -141,20 +224,27 @@ class SOSCenterView extends StatelessWidget {
                   ],
                 ),
               ),
-              IconButton(
-                icon: const Icon(Icons.map_rounded, color: AppColors.primaryCyan),
-                onPressed: () => vm.callContact(""),
-                tooltip: "Open Map",
-              ),
             ],
           ),
         ),
 
         const SizedBox(height: 16),
 
-        // Emergency Contacts with Direct Dial
-        const Text("Emergency Contacts (Direct Dial)", style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Colors.grey)),
-        const SizedBox(height: 8),
+        // Emergency Contacts Header & Add Contact Button
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text("Emergency Contacts (Tap Call to Dial)", style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Colors.grey)),
+            TextButton.icon(
+              onPressed: () => _showEditContactDialog(context, vm, null),
+              icon: const Icon(Icons.add, size: 16),
+              label: const Text("Add Number", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+
+        // Contacts list
         ...vm.contacts.map((c) => Padding(
               padding: const EdgeInsets.only(bottom: 8),
               child: GlassContainer(
@@ -163,7 +253,7 @@ class SOSCenterView extends StatelessWidget {
                 child: Row(
                   children: [
                     CircleAvatar(
-                      backgroundColor: c.isPrimary ? AppColors.primaryCyan : Colors.grey.withOpacity(0.3),
+                      backgroundColor: c.isPrimary ? AppColors.primaryCyan : Colors.grey.withValues(alpha: 0.3),
                       radius: 18,
                       child: Text(
                         c.name.substring(0, 1),
@@ -183,7 +273,7 @@ class SOSCenterView extends StatelessWidget {
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
                                   decoration: BoxDecoration(
-                                    color: AppColors.primaryCyan.withOpacity(0.15),
+                                    color: AppColors.primaryCyan.withValues(alpha: 0.15),
                                     borderRadius: BorderRadius.circular(4),
                                   ),
                                   child: const Text("PRIMARY", style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: AppColors.primaryCyan)),
@@ -196,8 +286,14 @@ class SOSCenterView extends StatelessWidget {
                       ),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.phone_rounded, color: AppColors.emeraldMint, size: 20),
+                      icon: const Icon(Icons.edit_outlined, size: 18, color: Colors.grey),
+                      onPressed: () => _showEditContactDialog(context, vm, c),
+                      tooltip: "Edit real phone number",
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.phone_rounded, color: AppColors.emeraldMint, size: 22),
                       onPressed: () => vm.callContact(c.phone),
+                      tooltip: "Call now",
                     ),
                   ],
                 ),
@@ -241,4 +337,3 @@ class SOSCenterView extends StatelessWidget {
     );
   }
 }
-

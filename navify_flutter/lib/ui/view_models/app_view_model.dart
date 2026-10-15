@@ -183,10 +183,73 @@ class AppViewModel extends ChangeNotifier {
     notifyListeners();
 
     // Announce via voice
-    _ttsService.speak("Emergency SOS activated. Contacting Vikram Sir and Tejas P with your location.");
+    _ttsService.speak("Emergency SOS activated. Contacting ${_contacts.isNotEmpty ? _contacts.first.name : 'caregiver'} with your location.");
 
     // Cloud alert
     _apiService.sendSOSAlert(location: locationText, lat: lat, lng: lng);
+
+    // Auto-dial primary contact directly via Android Phone intent
+    if (_autoCallOnSos && _contacts.isNotEmpty) {
+      final primary = _contacts.firstWhere((c) => c.isPrimary, orElse: () => _contacts.first);
+      Future.delayed(const Duration(milliseconds: 1200), () {
+        callContact(primary.phone);
+      });
+    }
+  }
+
+  bool _autoCallOnSos = true;
+  bool get autoCallOnSos => _autoCallOnSos;
+
+  void toggleAutoCallOnSos() {
+    _autoCallOnSos = !_autoCallOnSos;
+    notifyListeners();
+  }
+
+  void updateContact(String id, String newName, String newRelation, String newPhone, bool isPrimary) {
+    final idx = _contacts.indexWhere((c) => c.id == id);
+    if (idx != -1) {
+      if (isPrimary) {
+        for (int i = 0; i < _contacts.length; i++) {
+          _contacts[i] = EmergencyContact(
+            id: _contacts[i].id,
+            name: _contacts[i].name,
+            relation: _contacts[i].relation,
+            phone: _contacts[i].phone,
+            isPrimary: false,
+          );
+        }
+      }
+      _contacts[idx] = EmergencyContact(
+        id: id,
+        name: newName,
+        relation: newRelation,
+        phone: newPhone,
+        isPrimary: isPrimary,
+      );
+      notifyListeners();
+    }
+  }
+
+  void addContact(String name, String relation, String phone, bool isPrimary) {
+    if (isPrimary) {
+      for (int i = 0; i < _contacts.length; i++) {
+        _contacts[i] = EmergencyContact(
+          id: _contacts[i].id,
+          name: _contacts[i].name,
+          relation: _contacts[i].relation,
+          phone: _contacts[i].phone,
+          isPrimary: false,
+        );
+      }
+    }
+    _contacts.add(EmergencyContact(
+      id: "c_${DateTime.now().millisecondsSinceEpoch}",
+      name: name,
+      relation: relation,
+      phone: phone,
+      isPrimary: isPrimary,
+    ));
+    notifyListeners();
   }
 
   void resolveSOS(String eventId) {
