@@ -166,3 +166,4 @@ Once deployed to your production domain:
   ```
 - **Interactive Swagger Docs (Protected)**: `https://<your-api-domain>/docs`
 - **PWA Mobile App**: Open `https://<your-mobile-domain>` on iOS or Android $\rightarrow$ Tap **Add to Home Screen** to install as a native offline-first application.
+

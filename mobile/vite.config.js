@@ -15,5 +15,9 @@ export default defineConfig({
     host: '0.0.0.0', // Allows mobile devices on same Wi-Fi to connect
     port: 5173,
   },
+  preview: {
+    host: '0.0.0.0',
+    port: 4173,
+  },
 });
 
