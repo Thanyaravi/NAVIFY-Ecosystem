@@ -1,0 +1,5 @@
+package com.navify.assistive.navify_app
+
+import io.flutter.embedding.android.FlutterActivity
+
+class MainActivity : FlutterActivity()

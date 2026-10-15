@@ -1,0 +1,42 @@
+name: navify_app
+description: "NAVIFY Assistive Navigation Ecosystem - Native Mobile Client with CANIE Engine & On-Device Vision"
+publish_to: "none"
+version: 2.0.0+1
+
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  
+  # State Management & Architecture
+  provider: ^6.1.2
+  
+  # Hardware & Sensor Access
+  camera: ^0.10.5+9
+  geolocator: ^11.0.0
+  flutter_tts: ^3.8.5
+  url_launcher: ^6.2.6
+  vibration: ^1.9.0
+  
+  # Network & Persistence
+  http: ^1.2.1
+  shared_preferences: ^2.2.3
+  intl: ^0.19.0
+  
+  # Modern UI & Glassmorphism
+  google_fonts: ^6.2.1
+  lucide_icons: ^0.257.0
+  flutter_animate: ^4.5.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/
+
